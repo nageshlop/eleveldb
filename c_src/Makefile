@@ -6,6 +6,7 @@ BASEDIR := $(abspath $(CURDIR)/..)
 PROJECT ?= $(notdir $(BASEDIR))
 PROJECT := $(strip $(PROJECT))
 
+ERLANG_VERSION_GT_22 := $(shell erl -noshell -s init stop -eval "erlang:display(erlang:system_info(otp_release) > "22").")
 ERTS_INCLUDE_DIR ?= $(shell erl -noshell -s init stop -eval "io:format(\"~s/erts-~s/include/\", [code:root_dir(), erlang:system_info(version)]).")
 ERL_INTERFACE_INCLUDE_DIR ?= $(shell erl -noshell -s init stop -eval "io:format(\"~s\", [code:lib_dir(erl_interface, include)]).")
 ERL_INTERFACE_LIB_DIR ?= $(shell erl -noshell -s init stop -eval "io:format(\"~s\", [code:lib_dir(erl_interface, lib)]).")
@@ -16,15 +17,23 @@ C_SRC_OUTPUT ?= $(CURDIR)/../priv/$(PROJECT).so
 # System type and C compiler/flags.
 
 UNAME_SYS := $(shell uname -s)
+SNAPPY_STATIC_OR_DYN_LIB := system/lib/libsnappy.a
+
 ifeq ($(UNAME_SYS), Darwin)
     CC ?= cc
-    CFLAGS ?= -O3 -std=c99 -arch x86_64 -finline-functions -Wall -Wmissing-prototypes 
+    CFLAGS ?= -O3 -std=c99 -arch x86_64 -finline-functions -Wall -Wmissing-prototypes
     CXXFLAGS ?= -O3 -arch x86_64 -finline-functions -Wall -stdlib=libstdc++
     LDFLAGS ?= -arch x86_64 -flat_namespace -undefined suppress  -stdlib=libstdc++
 else ifeq ($(UNAME_SYS), FreeBSD)
     CC ?= cc
     CFLAGS ?= -O3 -std=c99 -finline-functions -Wall -Wmissing-prototypes
     CXXFLAGS ?= -O3 -finline-functions -Wall
+    FREEBSD_MAJOR_VERSION := $(shell uname -U | cut -c1-2)
+
+    ifeq ($(FREEBSD_MAJOR_VERSION), 12)
+        SNAPPY_STATIC_OR_DYN_LIB = /usr/local/lib/libsnappy.so
+    endif
+
 else ifeq ($(UNAME_SYS), Linux)
     CC ?= gcc
     CFLAGS ?= -O3 -std=c99 -finline-functions -Wall -Wmissing-prototypes
@@ -34,8 +43,13 @@ endif
 CFLAGS += -fPIC -I $(ERTS_INCLUDE_DIR) -I $(ERL_INTERFACE_INCLUDE_DIR) -I leveldb/include
 CXXFLAGS += -fPIC -I $(ERTS_INCLUDE_DIR) -I $(ERL_INTERFACE_INCLUDE_DIR) -I leveldb/include
 
-LDLIBS += -L $(ERL_INTERFACE_LIB_DIR) -lerl_interface -lei
-LDFLAGS += -shared leveldb/libleveldb.a system/lib/libsnappy.a -lstdc++
+ifeq ($(ERLANG_VERSION_GT_22), true)
+    LDLIBS += -L$(ERL_INTERFACE_LIB_DIR) -lei
+else
+    LDLIBS += -L$(ERL_INTERFACE_LIB_DIR) -lerl_interface -lei
+endif
+
+LDFLAGS += -shared leveldb/libleveldb.a $(SNAPPY_STATIC_OR_DYN_LIB) -lstdc++
 
 # Verbosity.
 
