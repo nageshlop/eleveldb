@@ -16,13 +16,21 @@ case os:type() of
                     false ->
                         CONFIG;
                     {port_env, Vals} ->
-                        Fold = fun({Flag,Val}, Acc) ->
-                                   case lists:member(Flag, Flags) of
-                                       true ->
-                                           [{Flag, Val++Opt}|Acc];
-                                       false ->
-                                           Acc
-                                   end
+                         Fold = fun
+                                ({Regex, Flag, Val}, Acc) ->
+                                    case lists:member(Flag, Flags) of
+                                        true ->
+                                            [{Regex, Flag, Val++Opt}|Acc];
+                                        false ->
+                                            Acc
+                                    end;
+                                ({Flag, Val}, Acc) ->
+                                    case lists:member(Flag, Flags) of
+                                        true ->
+                                            [{Flag, Val++Opt}|Acc];
+                                        false ->
+                                            Acc
+                                    end
                                end,
                         NewVals = lists:foldl(Fold, [], Vals),
                         lists:keyreplace(port_env, 1, CONFIG, {port_env, NewVals})
