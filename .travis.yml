@@ -1,7 +1,4 @@
 language: erlang
-arch:
-  - amd64
-  - ppc64le
 
 env:
   global:
@@ -36,6 +33,18 @@ jobs:
       otp_release: 22.3
       env: OTP_VERSION=22.3
     - os: linux
+      otp_release: 23.0
+      env: OTP_VERSION=23.0
+    - arch: ppc64le
+      os: linux
+      otp_release: 21.3
+      env: OTP_VERSION=21.3
+    - arch: ppc64le
+      os: linux
+      otp_release: 22.3
+      env: OTP_VERSION=22.3
+    - arch: ppc64le
+      os: linux
       otp_release: 23.0
       env: OTP_VERSION=23.0
     - os: osx
